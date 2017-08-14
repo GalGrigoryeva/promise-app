@@ -2,7 +2,6 @@
 
 var form = document.querySelector("form");
 var input = form.querySelector("input");
-var taskId = 0;
 var taskList = document.querySelector(".list-group");
 
 form.addEventListener("submit", function (event) {
@@ -10,22 +9,21 @@ form.addEventListener("submit", function (event) {
 
   var inputValue = input.value;
   if (inputValue.length > 0) {
-    addTask(inputValue);
+    addTask(createTaskId(), inputValue, false);
   }
   input.value = "";
 });
 
 
-function addTask(inputValue) {
-  taskId++;
-  var taskIdText = "task" + taskId;
+function addTask(taskId, taskDesc, isCompleted) {
+  var checkedString = isCompleted ? "checked" : "";
   var html = `
     <div class="col-lg-12">
       <div class="input-group">
         <span class="input-group-addon">
-          <input type="checkbox">
+          <input type="checkbox" ${checkedString}>
         </span>
-        <div class="form-control">${inputValue}</div>
+        <div class="form-control">${taskDesc}</div>
         <span class="input-group-btn">
           <button class="btn btn-secondary delete" type="button"></button>
         </span>
@@ -35,41 +33,67 @@ function addTask(inputValue) {
 
   var li = document.createElement("li");
   li.innerHTML = html;
-  li.setAttribute("id", taskIdText);
+  li.setAttribute("id", taskId);
   taskList.appendChild(li);
 
   var checkbox = li.querySelector("input");
   var taskItem = li.querySelector(".form-control");
-  checkbox.addEventListener("change", function() {
+  function updActiveState () {
     if (checkbox.checked) {
       taskItem.classList.add("active");
     } else {
       taskItem.classList.remove("active");
     }
-  });
+  }
+  checkbox.addEventListener("change", updActiveState);
+  updActiveState();
 
   var deleteBtn = li.querySelector(".delete");
+
   deleteBtn.addEventListener("click", function() {
+    var modalText = "";
+    if (checkbox.checked) {
+      modalText = "Are you sure you want to delete this promise forever?";
+    } else {
+      modalText = "Are you sure you want to delete this unfulfilled promise?";
+    }
+
     showYesNoModal(
-      "Are you sure you want to delete this unfulfilled promise?",
+      modalText,
       function() {
         removeTask(taskIdText);
       }
     );
   });
 
-  var taskObj = {
-    taskState: checkbox.value,
-    taskText: inputValue
-  };
-
-  var serialObj = JSON.stringify(taskObj);
-  localStorage.setItem("taskId", serialObj);
+  var serialObj = JSON.stringify(getTaskState(taskId));
+  localStorage.setItem(taskId, serialObj);
 }
 
 function removeTask(id) {
   var task = document.getElementById(id);
   taskList.removeChild(task);
+}
+
+function getTaskState (taskId) {
+  var task = document.getElementById(taskId);
+  var taskText = task.querySelector(".form-control").innerHTML;
+  var taskCheckbox = task.querySelector("input");
+
+  var taskObj = {
+    taskId: taskId,
+    isCompleted: taskCheckbox.checked,
+    text: taskText
+  };
+
+  return taskObj;
+}
+
+var taskIdCounter = 0;
+
+function createTaskId () {
+  taskIdCounter++;
+  return "task" + taskIdCounter;
 }
 
 function showYesNoModal(text, yesCallback, noCallback) {
