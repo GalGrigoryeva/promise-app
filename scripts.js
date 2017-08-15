@@ -4,6 +4,21 @@ var form = document.querySelector("form");
 var input = form.querySelector("input");
 var taskList = document.querySelector(".list-group");
 
+var taskIdCounter = 0;
+function createTaskId () {
+  taskIdCounter++;
+  return "task" + taskIdCounter;
+}
+
+for (var i = 0; i < localStorage.length; i++) {
+  var key = localStorage.key(i);
+  var taskObj = JSON.parse(localStorage.getItem(key));
+  addTask(taskObj.taskId, taskObj.text, taskObj.isCompleted);
+
+  var currentId = parseInt(taskObj.taskId.substring(4));
+  taskIdCounter = Math.max(currentId, taskIdCounter);
+}
+
 form.addEventListener("submit", function (event) {
   event.preventDefault();
 
@@ -38,6 +53,7 @@ function addTask(taskId, taskDesc, isCompleted) {
 
   var checkbox = li.querySelector("input");
   var taskItem = li.querySelector(".form-control");
+
   function updActiveState () {
     if (checkbox.checked) {
       taskItem.classList.add("active");
@@ -47,6 +63,7 @@ function addTask(taskId, taskDesc, isCompleted) {
   }
   checkbox.addEventListener("change", updActiveState);
   updActiveState();
+
 
   var deleteBtn = li.querySelector(".delete");
 
@@ -61,18 +78,23 @@ function addTask(taskId, taskDesc, isCompleted) {
     showYesNoModal(
       modalText,
       function() {
-        removeTask(taskIdText);
+        removeTask(taskId);
       }
     );
   });
 
-  var serialObj = JSON.stringify(getTaskState(taskId));
-  localStorage.setItem(taskId, serialObj);
+  function saveActiveState() {
+    var serialObj = JSON.stringify(getTaskState(taskId));
+    localStorage.setItem(taskId, serialObj);
+  }
+  checkbox.addEventListener("change", saveActiveState);
+  saveActiveState();
 }
 
 function removeTask(id) {
   var task = document.getElementById(id);
   taskList.removeChild(task);
+  localStorage.removeItem(id);
 }
 
 function getTaskState (taskId) {
@@ -87,13 +109,6 @@ function getTaskState (taskId) {
   };
 
   return taskObj;
-}
-
-var taskIdCounter = 0;
-
-function createTaskId () {
-  taskIdCounter++;
-  return "task" + taskIdCounter;
 }
 
 function showYesNoModal(text, yesCallback, noCallback) {
